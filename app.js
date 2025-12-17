@@ -1,12 +1,12 @@
 // CONFIG
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-// Dev setting: set to true to test "death" quickly
 const DEV_MODE = false; 
 
 // STATE
 let history = localStorage.getItem('lce_history') || '';
 let streak = parseInt(localStorage.getItem('lce_streak') || '0');
 let lastWriteTime = localStorage.getItem('lce_last_write') ? parseInt(localStorage.getItem('lce_last_write')) : null;
+// We will read targetTime dynamically to avoid sync issues
 let isDark = localStorage.getItem('lce_theme') === 'dark';
 let timerInterval = null;
 let cooldownInterval = null; 
@@ -21,20 +21,17 @@ const views = {
 };
 const modal = document.getElementById('rules-modal');
 const themeMeta = document.getElementById('meta-theme-color');
+const pactContainer = document.getElementById('pact-container');
+const calendarContainer = document.getElementById('calendar-container');
 
 // INIT
 document.addEventListener('DOMContentLoaded', () => {
-    // Check system preference if no local storage override
     if (localStorage.getItem('lce_theme') === null && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
         isDark = true;
     }
     applyTheme();
     checkVitality();
-    
-    // Check vitality every minute
     setInterval(checkVitality, 60000);
-    
-    // Initial routing
     routeView();
 });
 
@@ -48,7 +45,6 @@ function toggleTheme() {
 function applyTheme() {
     document.body.classList.toggle('dark-mode', isDark);
     document.getElementById('theme-toggle').textContent = isDark ? '☀' : '☾';
-    // Update browser UI color for mobile
     themeMeta.content = isDark ? '#111827' : '#ffffff';
 }
 
@@ -61,16 +57,38 @@ function checkVitality() {
     const now = new Date().getTime();
     const diff = now - lastWriteTime;
     
-    // 48 hours death rule
     const deathThreshold = DEV_MODE ? 60000 : (ONE_DAY_MS * 2);
 
     if (diff > deathThreshold) {
         failSession("The text died of loneliness.");
     }
-    // Reload if day passed while page open to show button
-    else if (diff >= ONE_DAY_MS && !views.success.classList.contains('hidden')) {
-        location.reload(); 
+    else if (!views.success.classList.contains('hidden')) {
+        const nextTime = getNextSessionTime();
+        if (now >= nextTime) {
+            location.reload(); 
+        }
     }
+}
+
+function getNextSessionTime() {
+    const targetTimeStr = localStorage.getItem('lce_target_time');
+    if (!lastWriteTime) return 0;
+
+    if (!targetTimeStr) {
+        return lastWriteTime + ONE_DAY_MS;
+    }
+
+    const [h, m] = targetTimeStr.split(':').map(Number);
+    const lastWriteDate = new Date(lastWriteTime);
+    
+    let nextOpen = new Date(lastWriteDate);
+    nextOpen.setHours(h, m, 0, 0);
+
+    if (nextOpen <= lastWriteDate) {
+        nextOpen.setDate(nextOpen.getDate() + 1);
+    }
+
+    return nextOpen.getTime();
 }
 
 function routeView() {
@@ -83,11 +101,13 @@ function routeView() {
         return;
     }
 
-    // Check Cooldown
     const now = new Date().getTime();
-    if (lastWriteTime && (now - lastWriteTime < ONE_DAY_MS)) {
-        showSuccess();
-        return;
+    if (lastWriteTime) {
+        const nextTime = getNextSessionTime();
+        if (now < nextTime) {
+            showSuccess();
+            return;
+        }
     }
 
     if (history.length > 0) {
@@ -105,9 +125,9 @@ function startWriting() {
     
     const editor = document.getElementById('editor');
     editor.value = '';
+    editor.disabled = false;
     editor.focus();
     
-    // Show preview context
     const preview = document.getElementById('history-preview');
     if (history) {
         const words = history.split(' ');
@@ -135,22 +155,22 @@ function startWriting() {
     }, 1000);
 }
 
-// ZEN MODE
 document.getElementById('editor').addEventListener('focus', () => {
     document.body.classList.add('zen-active');
-});
-
-// Detect blur to maybe remove zen mode, but usually keep it until saved
-document.getElementById('editor').addEventListener('blur', () => {
-    // Optional: remove zen on blur? 
-    // document.body.classList.remove('zen-active');
 });
 
 function saveSession(sentence) {
     clearInterval(timerInterval);
     document.body.classList.remove('zen-active');
+    
+    // Safety check: ensure we only save ONE sentence
+    // Even if user typed "Hello. World." we only take "Hello."
+    const match = sentence.match(/[.!?]/);
+    if (match) {
+        const endIndex = match.index + 1;
+        sentence = sentence.substring(0, endIndex);
+    }
 
-    // Simple formatting fix: ensure space before appending
     history = history ? `${history} ${sentence}` : sentence;
     streak++;
     lastWriteTime = new Date().getTime();
@@ -166,14 +186,72 @@ function showSuccess() {
     Object.values(views).forEach(el => el.classList.add('hidden'));
     views.success.classList.remove('hidden');
     
-    document.getElementById('success-streak').textContent = streak;
+    // Changed text from "Streak Safe" to "Day X Complete"
+    document.getElementById('success-streak').textContent = `Day ${streak} Complete`;
     document.getElementById('full-text-display').textContent = history;
     
-    // Scroll history to bottom
     const historyCard = document.querySelector('.card-history');
     if(historyCard) historyCard.scrollTop = historyCard.scrollHeight;
 
+    // Force read from storage to be sure
+    const currentTargetTime = localStorage.getItem('lce_target_time');
+
+    if (!currentTargetTime) {
+        pactContainer.classList.remove('hidden');
+        calendarContainer.classList.add('hidden');
+    } else {
+        pactContainer.classList.add('hidden');
+        calendarContainer.classList.remove('hidden');
+    }
+
     startCooldownTimer();
+}
+
+function sealThePact() {
+    const input = document.getElementById('ritual-time');
+    if (!input.value) return;
+
+    localStorage.setItem('lce_target_time', input.value);
+    
+    pactContainer.classList.add('hidden');
+    calendarContainer.classList.remove('hidden');
+    
+    startCooldownTimer();
+}
+
+function addToCalendar() {
+    const targetTimeStr = localStorage.getItem('lce_target_time');
+    if (!targetTimeStr) return;
+    
+    const [h, m] = targetTimeStr.split(':');
+    const now = new Date();
+    const startDate = now.toISOString().replace(/-|:|\.\d\d\d/g, "").slice(0, 8); 
+    
+    const icsContent = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//LastChance//Editor//EN",
+        "BEGIN:VEVENT",
+        `SUMMARY:LastChance Writing`,
+        `DTSTART;TZID=Local:${startDate}T${h}${m}00`,
+        `RRULE:FREQ=DAILY`,
+        `DESCRIPTION:The window is open. Write one sentence.`,
+        "BEGIN:VALARM",
+        "TRIGGER:-PT0M",
+        "ACTION:DISPLAY",
+        "DESCRIPTION:Reminder",
+        "END:VALARM",
+        "END:VEVENT",
+        "END:VCALENDAR"
+    ].join("\r\n");
+
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.setAttribute('download', 'lastchance_ritual.ics');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 function startCooldownTimer() {
@@ -182,13 +260,12 @@ function startCooldownTimer() {
     
     const updateTimer = () => {
         const now = new Date().getTime();
-        const nextTime = lastWriteTime + ONE_DAY_MS;
+        const nextTime = getNextSessionTime();
         const diff = nextTime - now;
 
         if (diff <= 0) {
             timerEl.textContent = "Ready now";
             clearInterval(cooldownInterval);
-            // Optionally reload or show button
         } else {
             const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -206,10 +283,7 @@ function failSession(reason) {
     clearInterval(cooldownInterval);
     document.body.classList.remove('zen-active');
     
-    localStorage.removeItem('lce_history');
-    localStorage.removeItem('lce_streak');
-    localStorage.removeItem('lce_last_write');
-    // keep theme preference
+    localStorage.clear();
     
     history = '';
     streak = 0;
@@ -230,10 +304,15 @@ document.getElementById('close-modal').addEventListener('click', toggleModal);
 document.getElementById('btn-compose-new').addEventListener('click', startWriting);
 document.getElementById('btn-continue').addEventListener('click', startWriting);
 
+document.getElementById('btn-seal-pact').addEventListener('click', sealThePact);
+document.getElementById('btn-calendar').addEventListener('click', addToCalendar);
+
 document.getElementById('editor').addEventListener('input', (e) => {
     const val = e.target.value;
-    // Check for sentence enders
-    if (/[.!?]$/.test(val.trim())) {
+    // Strict check: Is there a punctuation mark anywhere?
+    if (/[.!?]/.test(val)) {
+        // Disable input immediately to prevent double-tap spaces or fast typing
+        e.target.disabled = true;
         saveSession(val.trim());
     }
 });
@@ -248,7 +327,6 @@ document.getElementById('btn-reset-fail').addEventListener('click', () => {
     location.reload();
 });
 
-// Prevent accidentally leaving?
 window.onbeforeunload = function() {
     if (!views.writing.classList.contains('hidden')) {
         return "Timer is running. Are you sure?";

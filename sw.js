@@ -1,4 +1,5 @@
-const CACHE_NAME = 'lastchance-v1';
+// Змінили версію на v2, щоб змусити браузер оновити CSS та JS
+const CACHE_NAME = 'lastchance-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -9,9 +10,25 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (e) => {
+  // Force update immediately
+  self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
   );
+});
+
+self.addEventListener('activate', (e) => {
+  // Clear old caches (v1)
+  e.waitUntil(
+    caches.keys().then((keyList) => {
+      return Promise.all(keyList.map((key) => {
+        if (key !== CACHE_NAME) {
+          return caches.delete(key);
+        }
+      }));
+    })
+  );
+  return self.clients.claim();
 });
 
 self.addEventListener('fetch', (e) => {
