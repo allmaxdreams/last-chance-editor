@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#ffffff" id="meta-theme-color">
+    <meta name="description" content="One sentence a day. Miss the period and lose everything.">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>LASTCHANCE.EDITOR</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon192.png">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Merriweather:ital@0;1&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header id="main-header">
+        <span class="brand">LASTCHANCE.EDITOR</span>
+        <div class="header-actions">
+            <button id="info-toggle" class="icon-btn" aria-label="Rules">?</button>
+            <button id="theme-toggle" class="icon-btn" aria-label="Toggle Theme">☾</button>
+        </div>
+    </header>
+
+    <div id="rules-modal" class="modal-overlay">
+        <button id="close-modal" class="modal-close">×</button>
+        <div class="modal-content">
+            <h2>Manifesto</h2>
+            <div class="manifesto-text">
+                <p>LastChance is an uncompromising editor designed for chronic procrastinators.</p>
+                <h3>The Brutal Rules</h3>
+                <ul class="rules-list">
+                    <li><strong>One sentence a day.</strong> You enter, write one thought, and leave.</li>
+                    <li><strong>60 seconds.</strong> The timer starts immediately.</li>
+                    <li><strong>No cheating.</strong> No paste allowed.</li>
+                    <li><strong>Permadeath.</strong> Miss the period? Progress deleted.</li>
+                    <li><strong>Discipline.</strong> Gone for 48h? Text dies of loneliness.</li>
+                    <li><strong>Local & Private.</strong> Data lives only on this device. Safe from us, but if you clear your cache, you kill your story.</li>
+                </ul>
+                
+                <div class="modal-footer">
+                    <a href="https://www.paypal.com/donate?hosted_button_id=QY26HPAB5JFSW" target="_blank" class="donate-link">Fuel the ritual ↗</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main id="view-new-user" class="view hidden">
+        <div class="center-container">
+            <h2>Better one sentence a day than nothing.</h2>
+            <div class="card">
+                <ul class="spacious-rules">
+                    <li><strong>1 Sentence:</strong> 60 seconds to write one thought.</li>
+                    <li><strong>No Mercy:</strong> miss the mark → reset.</li>
+                    <li><strong>Consistency:</strong> vanish > 48h → death.</li>
+                </ul>
+            </div>
+            <button id="btn-compose-new" class="btn">Compose</button>
+        </div>
+    </main>
+
+    <main id="view-returning" class="view hidden">
+        <div class="center-container">
+            <div class="card card-history">
+                <p id="history-display" class="history-text no-select"></p>
+                <span class="cursor-blink"></span>
+            </div>
+            <button id="btn-continue" class="btn mb-6">Continue Story</button>
+            <div class="text-center subtext">Day <span id="streak-display">1</span></div>
+        </div>
+    </main>
+
+    <main id="view-writing" class="view hidden">
+        <div class="writing-container">
+            <div id="timer" class="timer">00:60</div>
+            <div id="history-preview" class="history-preview no-select"></div>
+            <textarea id="editor" placeholder="Write here..." spellcheck="false" autocomplete="off"></textarea>
+            <div class="subtext mt-auto mb-4 hint-text">End with [ . ] [ ! ] or [ ? ]</div>
+        </div>
+    </main>
+
+    <main id="view-success" class="view hidden">
+        <div class="center-container">
+            <h2 class="success-title">Recorded.</h2>
+            <p class="subtext mb-8">Streak safe (<span id="success-streak">0</span>).</p>
+            
+            <div class="card card-history mb-6">
+                <p id="full-text-display" class="history-text no-select"></p>
+            </div>
+
+            <div id="pact-container" class="card hidden" style="border-color: var(--accent-color);">
+                <h3 style="margin-top:0; font-size:14px; text-transform:uppercase;">Establish The Ritual</h3>
+                <p class="subtext" style="line-height:1.5; margin-bottom:16px;">
+                    Order is your ally. Choose a specific time for your daily session. Your writing window will open every day at this time.<br><br>
+                    <strong>Warning:</strong> This choice is final. To change the time later, you must fail and lose your history.
+                </p>
+                <div style="display:flex; gap:12px; justify-content:center; margin-bottom:16px;">
+                    <input type="time" id="ritual-time" class="time-input" value="08:00">
+                </div>
+                <button id="btn-seal-pact" class="btn" style="width:100%;">Seal The Pact</button>
+            </div>
+
+            <div id="calendar-container" class="hidden text-center mb-8">
+                <p class="subtext mb-4">A little structure helps. Add a permanent reminder to your calendar.</p>
+                <button id="btn-calendar" class="btn-outline">Add to Calendar</button>
+            </div>
+
+            <div class="text-center mb-4">
+                <div class="subtext">Next sentence in:</div>
+                <div id="next-session-timer" class="countdown-time">--:--:--</div>
+            </div>
+            
+            <p class="quote">"Thank yourself — and come back tomorrow."</p>
+        </div>
+    </main>
+
+    <main id="view-failed" class="view hidden">
+        <div class="center-container">
+            <h1 class="fail-title">Lost</h1>
+            <p id="fail-reason" class="fail-reason">Everything is deleted.</p>
+            <button id="btn-reset-fail" class="btn-reset">Take it</button>
+        </div>
+    </main>
+
+    <footer class="copyright">
+        <a href="https://www.paypal.com/donate?hosted_button_id=QY26HPAB5JFSW" target="_blank" class="donate-link" style="display:block; margin-bottom:12px;">Fuel the ritual ↗</a>
+        <a href="https://www.linkedin.com/in/allmaxdreams/" target="_blank">© Maksym Kuzmenko ↗</a>
+    </footer>
+
+    <script src="app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .catch(err => console.log('SW failed', err));
+            });
+        }
+    </script>
+</body>
+</html>
