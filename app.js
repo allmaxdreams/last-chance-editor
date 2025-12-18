@@ -164,7 +164,6 @@ function saveSession(sentence) {
     document.body.classList.remove('zen-active');
     
     // Safety check: ensure we only save ONE sentence
-    // Even if user typed "Hello. World." we only take "Hello."
     const match = sentence.match(/[.!?]/);
     if (match) {
         const endIndex = match.index + 1;
@@ -186,7 +185,6 @@ function showSuccess() {
     Object.values(views).forEach(el => el.classList.add('hidden'));
     views.success.classList.remove('hidden');
     
-    // Changed text from "Streak Safe" to "Day X Complete"
     document.getElementById('success-streak').textContent = `Day ${streak} Complete`;
     document.getElementById('full-text-display').textContent = history;
     
@@ -201,7 +199,11 @@ function showSuccess() {
         calendarContainer.classList.add('hidden');
     } else {
         pactContainer.classList.add('hidden');
-        calendarContainer.classList.remove('hidden');
+        if (streak === 1) {
+            calendarContainer.classList.remove('hidden');
+        } else {
+            calendarContainer.classList.add('hidden');
+        }
     }
 
     startCooldownTimer();
@@ -235,7 +237,7 @@ function addToCalendar() {
         `SUMMARY:LastChance Writing`,
         `DTSTART;TZID=Local:${startDate}T${h}${m}00`,
         `RRULE:FREQ=DAILY`,
-        `DESCRIPTION:The window is open. Write one sentence.`,
+        `DESCRIPTION:The window is open. Write one sentence. https://allmaxdreams.github.io/last-chance-editor/`,
         "BEGIN:VALARM",
         "TRIGGER:-PT0M",
         "ACTION:DISPLAY",
@@ -307,11 +309,17 @@ document.getElementById('btn-continue').addEventListener('click', startWriting);
 document.getElementById('btn-seal-pact').addEventListener('click', sealThePact);
 document.getElementById('btn-calendar').addEventListener('click', addToCalendar);
 
+// Hard Reset Logic
+document.getElementById('btn-hard-reset').addEventListener('click', () => {
+    if (confirm("Are you sure? This will delete your entire story and reset your streak. This cannot be undone.")) {
+        localStorage.clear();
+        location.reload();
+    }
+});
+
 document.getElementById('editor').addEventListener('input', (e) => {
     const val = e.target.value;
-    // Strict check: Is there a punctuation mark anywhere?
     if (/[.!?]/.test(val)) {
-        // Disable input immediately to prevent double-tap spaces or fast typing
         e.target.disabled = true;
         saveSession(val.trim());
     }

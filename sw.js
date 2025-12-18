@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lastchance-v5';
+const CACHE_NAME = 'lastchance-v7';
 const ASSETS = [
   './',
   './index.html',
